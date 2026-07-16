@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Qwen — AI Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #12151c;
+    --panel-border: #232732;
+    --gold: #d4b483;
+    --gold-soft: #e8d4a8;
+    --text: #eceef2;
+    --muted: #8b909e;
+    --user-bubble: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(212,180,131,0.06), transparent 45%),
+      var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+  }
+
+  .sidebar {
+    width: 300px;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 4px;
+  }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, var(--gold), var(--gold-soft), var(--gold));
+    box-shadow: 0 0 18px rgba(212,180,131,0.35);
+    flex-shrink: 0;
+  }
+  .brand-text .name {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.2px;
+  }
+  .brand-text .tag {
+    font-size: 10.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .upload-box {
+    border: 1px dashed var(--panel-border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  input[type="file"] {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  input[type="file"]::file-selector-button {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  button.primary {
+    background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+    color: #1a1204;
+    border: none;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  button.primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button.primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--gold); color: var(--gold-soft); }
+
+  .status { font-size: 12.5px; color: var(--muted); min-height: 16px; }
+  .status.ok { color: var(--gold-soft); }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .main header {
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .main header h1 { font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 600; margin: 0; }
+  .main header span { font-size: 12px; color: var(--muted); }
+
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    max-width: 320px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .empty-state .glyph {
+    width: 44px; height: 44px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, var(--gold), var(--gold-soft), var(--gold));
+    opacity: 0.5;
+  }
+
+  .row { display: flex; gap: 10px; max-width: 72%; }
+  .row.user { align-self: flex-end; flex-direction: row-reverse; }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+  }
+  .avatar.assistant { background: conic-gradient(from 180deg, var(--gold), var(--gold-soft), var(--gold)); color: #1a1204; }
+  .avatar.user { background: var(--user-bubble); border: 1px solid var(--panel-border); color: var(--muted); }
+
+  .bubble { padding: 12px 16px; border-radius: 14px; line-height: 1.55; font-size: 14.5px; }
+  .row.assistant .bubble { background: var(--panel); border: 1px solid var(--panel-border); border-top-left-radius: 4px; }
+  .row.user .bubble { background: var(--user-bubble); border-top-right-radius: 4px; }
+
+  .bubble table { border-collapse: collapse; margin: 10px 0; font-size: 13.5px; width: 100%; }
+  .bubble th, .bubble td { border: 1px solid var(--panel-border); padding: 8px 12px; text-align: left; }
+  .bubble th { background: rgba(212,180,131,0.1); color: var(--gold-soft); }
+  .bubble ul, .bubble ol { padding-left: 20px; margin: 8px 0; }
+  .bubble p { margin: 0 0 8px; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble strong { color: var(--gold-soft); }
+
+  .bubble pre {
+    background: #0b0d12;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  .bubble code { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; }
+  .bubble p code { background: rgba(212,180,131,0.1); padding: 2px 6px; border-radius: 4px; color: var(--gold-soft); }
+
+  .input-bar { display: flex; gap: 10px; padding: 20px 32px 26px; border-top: 1px solid var(--panel-border); }
+  .input-bar input {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .input-bar input:focus { outline: none; border-color: var(--gold); }
+  .input-bar button { padding: 0 22px; border-radius: 10px; }
+</style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <div class="name">Qwen</div>
+        <div class="tag">AI Assistant</div>
+      </div>
+    </div>
+
+    <div class="section-label">Document</div>
+    <div class="upload-box">
+      <input type="file" id="fileInput" accept=".pdf,.txt" />
+      <button class="ghost" id="uploadBtn">Upload</button>
+      <div class="status" id="uploadStatus"></div>
+    </div>
+
+    <button class="primary" id="buildBtn">Build Knowledge Base</button>
+    <div class="status" id="buildStatus"></div>
+  </div>
+
+  <div class="main">
+    <header>
+      <h1>Qwen Assistant</h1>
+      <span>Grounded answers from your document</span>
+    </header>
+
+    <div class="chat" id="chat">
+      <div class="empty-state" id="emptyState">
+        <div class="glyph"></div>
+        Upload a document and build the knowledge base to start asking questions.
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <input type="text" id="queryInput" placeholder="Ask something about your document…" />
+      <button class="primary" id="sendBtn">Send</button>
+    </div>
+  </div>
+
+<script>
+const uploadBtn = document.getElementById('uploadBtn');
+const buildBtn = document.getElementById('buildBtn');
+const sendBtn = document.getElementById('sendBtn');
+const fileInput = document.getElementById('fileInput');
+const queryInput = document.getElementById('queryInput');
+const chat = document.getElementById('chat');
+const emptyState = document.getElementById('emptyState');
+const uploadStatus = document.getElementById('uploadStatus');
+const buildStatus = document.getElementById('buildStatus');
+
+let indexReady = false;
+
+uploadBtn.onclick = async () => {
+  if (!fileInput.files.length) return;
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  uploadStatus.textContent = 'Uploading…';
+  uploadStatus.className = 'status';
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  if (res.ok) {
+    const data = await res.json();
+    uploadStatus.textContent = `Saved: ${data.filename}`;
+    uploadStatus.className = 'status ok';
+  } else {
+    uploadStatus.textContent = 'Upload failed.';
+  }
+};
+
+buildBtn.onclick = async () => {
+  buildStatus.textContent = 'Processing…';
+  buildStatus.className = 'status';
+  buildBtn.disabled = true;
+  try {
+    const res = await fetch('/build-index', { method: 'POST' });
+    if (res.ok) {
+      buildStatus.textContent = 'Knowledge base ready.';
+      buildStatus.className = 'status ok';
+      indexReady = true;
+    } else {
+      const err = await res.json();
+      buildStatus.textContent = err.detail || 'Failed to build index.';
+    }
+  } finally {
+    buildBtn.disabled = false;
+  }
+};
+
+function addMessage(role, text) {
+  if (emptyState) emptyState.remove();
+  const row = document.createElement('div');
+  row.className = `row ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `avatar ${role}`;
+  avatar.textContent = role === 'user' ? 'You' : 'Q';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (role === 'assistant') {
+    bubble.innerHTML = marked.parse(text || '');
+    bubble.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+  } else {
+    bubble.textContent = text;
+  }
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+  return bubble;
+}
+
+sendBtn.onclick = async () => {
+  const query = queryInput.value.trim();
+  if (!query) return;
+  if (!indexReady) {
+    addMessage('assistant', 'Please upload a document and build the knowledge base first.');
+    return;
+  }
+  addMessage('user', query);
+  queryInput.value = '';
+
+  const bubble = addMessage('assistant', '');
+  const res = await fetch(`/chat?query=${encodeURIComponent(query)}`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    full += decoder.decode(value, { stream: true });
+    bubble.innerHTML = marked.parse(full);
+    bubble.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+    chat.scrollTop = chat.scrollHeight;
+  }
+};
+
+queryInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendBtn.click();
+});
+</script>
+</body>
+</html>
