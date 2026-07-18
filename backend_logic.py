@@ -34,7 +34,7 @@ def init_settings():
         api_key=api_key,
         request_timeout=60.0,
     )
-    Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+   Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")")
 
 
 def _get_chroma_collection():
