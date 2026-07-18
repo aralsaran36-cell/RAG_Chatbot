@@ -6,23 +6,14 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from backend_logic import process_documents, get_query_engine, has_existing_index, clear_index, DATA_DIR
+from backend_logic import process_documents, has_existing_index, clear_index, DATA_DIR
 
 load_dotenv()
 
 app = FastAPI(title="Qwen RAG API")
 
+# In-memory holder for the loaded index (kept alive across requests in this process)
 STATE = {"index": None}
-
-
-@app.on_event("startup")
-def startup():
-    if has_existing_index():
-        try:
-            STATE["index"] = process_documents(force_rebuild=False)
-        except Exception as e:
-            print(f"STARTUP LOAD FAILED: {e}")
-            STATE["index"] = None
 
 
 @app.post("/upload")
@@ -47,48 +38,58 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @app.post("/build-index")
-def build_index(force_rebuild: bool = True):
+def build_index():
     try:
-        index = process_documents(force_rebuild=force_rebuild)
-        print(f"BUILD RESULT: index type = {type(index)}, is None = {index is None}")
-        if index is None:
-            raise HTTPException(status_code=500, detail="Index build returned nothing.")
+        index = process_documents(force_rebuild=True)
         STATE["index"] = index
         return {"status": "ready"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         import traceback
-        print("BUILD EXCEPTION:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Build failed: {str(e)}")
 
 
 @app.get("/chat")
 def chat(query: str):
-    print(f"CHAT CALLED with query={query!r}")
-    index = STATE.get("index")
-    print(f"STATE index type = {type(index)}, is None = {index is None}")
+    from llama_index.core import PromptTemplate, Settings
 
+    index = STATE.get("index")
     if index is None:
         raise HTTPException(status_code=400, detail="Knowledge base not built yet.")
 
     try:
-        print("Calling get_query_engine...")
-        query_engine = get_query_engine(index)
-        print(f"query_engine type = {type(query_engine)}, is None = {query_engine is None}")
+        qa_prompt_str = (
+            "Context information is below.\n"
+            "---------------------\n"
+            "{context_str}\n"
+            "---------------------\n"
+            "Answer ONLY using the provided context. If the answer is NOT in the context, "
+            "strictly say: 'I am sorry, but this information is not in the uploaded document.'\n"
+            "Query: {query_str}\n"
+            "Answer: "
+        )
+        qa_template = PromptTemplate(qa_prompt_str)
+
+        query_engine = index.as_query_engine(
+            streaming=True,
+            similarity_top_k=5,
+            text_qa_template=qa_template,
+            llm=Settings.llm,
+        )
 
         if query_engine is None:
-            raise HTTPException(status_code=500, detail="Failed to create query engine.")
+            raise HTTPException(
+                status_code=500,
+                detail="index.as_query_engine() itself returned None — this should never happen.",
+            )
 
-        print("Calling query_engine.query...")
         response = query_engine.query(query)
-        print(f"response type = {type(response)}")
     except HTTPException:
         raise
     except Exception as e:
         import traceback
-        print("CHAT EXCEPTION:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
@@ -99,6 +100,7 @@ def chat(query: str):
     return StreamingResponse(stream(), media_type="text/plain")
 
 
+# Serve the simple chat frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
