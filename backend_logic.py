@@ -34,7 +34,7 @@ def init_settings():
         api_key=api_key,
         request_timeout=60.0,
     )
-   Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
 def _get_chroma_collection():
@@ -123,11 +123,4 @@ def get_query_engine(index, top_k: int = 5):
         "Preserve code from the context exactly as written, inside a fenced code block.\n"
         "Query: {query_str}\n"
         "Answer: "
-    )
-    qa_template = PromptTemplate(qa_prompt_str)
-
-    return index.as_query_engine(
-        streaming=True,
-        similarity_top_k=top_k,
-        text_qa_template=qa_template,
     )
