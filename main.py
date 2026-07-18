@@ -67,6 +67,13 @@ def chat(query: str):
             "---------------------\n"
             "Answer ONLY using the provided context. If the answer is NOT in the context, "
             "strictly say: 'I am sorry, but this information is not in the uploaded document.'\n"
+            "Choose the clearest format for the content automatically, without being asked:\n"
+            "- Comparisons (X vs Y) -> a Markdown table\n"
+            "- Steps or multiple items -> bullet or numbered lists\n"
+            "- Code (e.g. Python) -> a fenced code block with the language tag, e.g. ```python\n"
+            "- Key terms -> **bold**\n"
+            "- A single simple fact -> plain sentence, no need to force structure\n"
+            "Preserve code from the context exactly as written, inside a fenced code block.\n"
             "Query: {query_str}\n"
             "Answer: "
         )
