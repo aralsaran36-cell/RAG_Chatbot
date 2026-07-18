@@ -12,7 +12,6 @@ load_dotenv()
 
 app = FastAPI(title="Qwen RAG API")
 
-# In-memory holder for the loaded index (kept alive across requests in this process)
 STATE = {"index": None}
 
 
@@ -22,7 +21,7 @@ def startup():
         try:
             STATE["index"] = process_documents(force_rebuild=False)
         except Exception as e:
-            print(f"Startup index load failed: {e}")
+            print(f"STARTUP LOAD FAILED: {e}")
             STATE["index"] = None
 
 
@@ -51,6 +50,7 @@ async def upload_file(file: UploadFile = File(...)):
 def build_index(force_rebuild: bool = True):
     try:
         index = process_documents(force_rebuild=force_rebuild)
+        print(f"BUILD RESULT: index type = {type(index)}, is None = {index is None}")
         if index is None:
             raise HTTPException(status_code=500, detail="Index build returned nothing.")
         STATE["index"] = index
@@ -58,24 +58,37 @@ def build_index(force_rebuild: bool = True):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        import traceback
+        print("BUILD EXCEPTION:")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Build failed: {str(e)}")
 
 
 @app.get("/chat")
 def chat(query: str):
+    print(f"CHAT CALLED with query={query!r}")
     index = STATE.get("index")
+    print(f"STATE index type = {type(index)}, is None = {index is None}")
+
     if index is None:
         raise HTTPException(status_code=400, detail="Knowledge base not built yet.")
 
     try:
+        print("Calling get_query_engine...")
         query_engine = get_query_engine(index)
+        print(f"query_engine type = {type(query_engine)}, is None = {query_engine is None}")
+
         if query_engine is None:
             raise HTTPException(status_code=500, detail="Failed to create query engine.")
+
+        print("Calling query_engine.query...")
         response = query_engine.query(query)
+        print(f"response type = {type(response)}")
     except HTTPException:
         raise
     except Exception as e:
         import traceback
+        print("CHAT EXCEPTION:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
@@ -86,7 +99,6 @@ def chat(query: str):
     return StreamingResponse(stream(), media_type="text/plain")
 
 
-# Serve the simple chat frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
