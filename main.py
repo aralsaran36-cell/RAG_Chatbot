@@ -18,10 +18,12 @@ STATE = {"index": None}
 
 @app.on_event("startup")
 def startup():
-    # If an index was already built in a previous run, load it immediately so
-    # the app is ready to answer questions without waiting for a manual rebuild.
     if has_existing_index():
-        STATE["index"] = process_documents()
+        try:
+            STATE["index"] = process_documents(force_rebuild=False)
+        except Exception as e:
+            print(f"Startup index load failed: {e}")
+            STATE["index"] = None
 
 
 @app.post("/upload")
@@ -35,7 +37,6 @@ async def upload_file(file: UploadFile = File(...)):
     else:
         os.makedirs(DATA_DIR)
 
-    # Wipe old embeddings — new document replaces the old one entirely
     clear_index()
     STATE["index"] = None
 
@@ -49,19 +50,32 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/build-index")
 def build_index(force_rebuild: bool = True):
     try:
-        STATE["index"] = process_documents(force_rebuild=force_rebuild)
+        index = process_documents(force_rebuild=force_rebuild)
+        if index is None:
+            raise HTTPException(status_code=500, detail="Index build returned nothing.")
+        STATE["index"] = index
         return {"status": "ready"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Build failed: {str(e)}")
 
 
 @app.get("/chat")
 def chat(query: str):
-    if STATE["index"] is None:
+    index = STATE.get("index")
+    if index is None:
         raise HTTPException(status_code=400, detail="Knowledge base not built yet.")
 
-    query_engine = get_query_engine(STATE["index"])
-    response = query_engine.query(query)
+    try:
+        query_engine = get_query_engine(index)
+        if query_engine is None:
+            raise HTTPException(status_code=500, detail="Failed to create query engine.")
+        response = query_engine.query(query)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
     def stream():
         for chunk in response.response_gen:
