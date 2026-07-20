@@ -1,6 +1,6 @@
-# 🤖 Qwen AI Assistant — RAG Chatbot
+# 🤖 RAG Chatbot — Document Q&A Assistant
 
-An end-to-end **Retrieval-Augmented Generation (RAG)** chatbot that lets you upload documents and ask questions in natural language. Powered by **Qwen 2.5** (local LLM via Ollama), **LlamaIndex**, and **ChromaDB** for fast semantic search.
+An end-to-end **Retrieval-Augmented Generation (RAG)** chatbot that lets you upload unstructured documents and ask questions in natural language, powered by **Groq's Llama 3.3 70B** for fast, context-aware response generation.
 
 ---
 
@@ -8,35 +8,37 @@ An end-to-end **Retrieval-Augmented Generation (RAG)** chatbot that lets you upl
 
 🔗 **Live Demo:** [https://rag-chatbot-kr26.onrender.com/](https://rag-chatbot-kr26.onrender.com/)
 
-> Upload a PDF → Ask questions → Get intelligent answers from your document!
+> Upload a document → Ask questions → Get intelligent, context-aware answers!
 
 ---
 
 ## 🧠 How It Works
+
 User uploads document
 ↓
 LlamaIndex chunks & embeds the text
 ↓
-Embeddings stored in ChromaDB (vector DB)
+Embeddings stored in ChromaDB (vector database)
 ↓
 User asks a question
 ↓
-Semantic search finds relevant chunks
+Semantic search retrieves relevant chunks
 ↓
-Qwen 2.5 (via Ollama) generates the answer
+Groq (Llama 3.3 70B) generates a context-aware answer
 ↓
-Answer displayed in Streamlit UI
+Answer streamed to a custom chat UI
 
 ---
 
+
 ## ✨ Features
 
-- 📄 Upload PDF / text documents
-- 💬 Ask natural language questions on your document
-- 🔍 Semantic search using ChromaDB embeddings
-- 🧩 Local LLM (Qwen 2.5) via Ollama — 100% offline & private
-- ⚡ Fast retrieval with LlamaIndex
-- 🖥️ Clean Streamlit UI with session-based chat history
+- 📄 Upload and query unstructured documents
+- 💬 Ask natural language questions with context-aware answers
+- 🔍 Semantic search and retrieval via ChromaDB embeddings
+- ⚡ Fast, cloud-hosted inference using Groq (Llama 3.3 70B)
+- 🖥️ Custom streaming chat UI for real-time responses
+- 🐳 Containerized with Docker and deployed on Render
 
 ---
 
@@ -44,11 +46,12 @@ Answer displayed in Streamlit UI
 
 | Component | Technology |
 |---|---|
-| LLM | Qwen 2.5 (via Ollama) |
+| LLM | Groq — Llama 3.3 70B (cloud-hosted) |
 | RAG Framework | LlamaIndex |
 | Vector Database | ChromaDB |
-| Embeddings | Semantic Embeddings |
-| UI | Streamlit |
+| Backend | FastAPI |
+| UI | Custom streaming chat interface |
+| Deployment | Docker, Render |
 | Language | Python |
 
 ---
@@ -61,26 +64,27 @@ git clone https://github.com/aralsaran36-cell/Qwen-AI-Assistant.git
 cd Qwen-AI-Assistant
 
 # 2. Install dependencies
-pip install llama-index chromadb streamlit ollama
+pip install -r requirements.txt
 
-# 3. Pull Qwen model via Ollama
-ollama pull qwen2.5
+# 3. Set your Groq API key
+export GROQ_API_KEY=your_api_key_here
 
-# 4. Run the app
-streamlit run app.py
+# 4. Run the backend
+uvicorn app:app --reload
 ```
 
 ---
 
 ## 📁 Project Structure
 
-Qwen-AI-Assistant/
+RAG-Chatbot/
 │
-├── Gwen AI Assistant.ipynb # Main notebook
+├── app.py # FastAPI backend
+├── Dockerfile
 ├── README.md
 └── requirements.txt
-
 ---
+
 
 ## 💡 Use Cases
 
